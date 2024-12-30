@@ -1,0 +1,90 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © DearyouKR
+
+//@version=6
+indicator("猎杀+加减仓-K线", overlay=false, format=format.price, precision=2, max_labels_count=500)
+
+// 计算波动幅度
+o_c_volatility = open < close ?  (close - open) / open * 100 : -((open - close) / open * 100)
+high_volatility = open < close ?  (high - close) / close * 100 : (high - open) / high * 100
+low_volatility = open < close ?  (open - low) / low * 100 : (close - low) / close * 100
+
+
+// 初始化累积波动值变量
+var float open_value = na
+var float high_value = na
+var float low_value = na
+var float close_value = na
+
+
+
+// 更新累积波动值
+open_value := na(open_value) ? o_c_volatility : open_value + o_c_volatility
+close_value := open_value[1] + o_c_volatility
+high_value := close_value > open_value[1] ? close_value + high_volatility : open_value[1] + high_volatility
+low_value := close_value > open_value[1] ? open_value[1] - low_volatility : close_value - low_volatility
+
+k_color = open < close ? color.lime : color.red
+
+plotcandle(open_value[1],high_value,low_value,close_value,title = "K线",color = k_color, wickcolor = k_color, bordercolor = k_color)
+
+
+if true
+    close_value_line = line.new(bar_index,close_value,bar_index[144],close_value,color = k_color, extend = extend.both)
+    line.delete(close_value_line[1])
+
+
+
+
+long_liquidation = {{L}} na
+
+
+short_liquidation = {{S}} na
+
+
+add_value = {{add}} na
+
+
+minus_value = {{minus}} na
+
+
+long_short_switch = input.bool(true, "long_short_switch")
+
+var box minus_box = na
+if not na(minus_value) and long_short_switch
+    hl = str.contains(minus_value, "lminus") ? low_value : high_value
+    col = str.contains(minus_value, "lminus") ? color.red : color.yellow
+    style = str.contains(minus_value, "lminus") ? label.style_label_upper_right : label.style_label_lower_right
+    txt = str.match(minus_value, "[\\d]+")
+    tooltip_txt = str.contains(minus_value, "lminus") ? "多减仓\n底左=抛售=反转\n顶右=出逃=跌" : "空减仓\n底右=转强=启动\n顶左=杀空=近顶"
+    label.new(bar_index, hl, text = str.tostring(txt), color = col, style = style, size = 14, tooltip = tooltip_txt, text_font_family = font.family_default,  text_formatting = text.format_italic)
+
+    minus_box := box.new(time, high_value, time + (192 * 15 * 60 * 1000), low_value, border_color = col, xloc=xloc.bar_time, border_style=line.style_dotted, bgcolor = color.new(col, 60))
+    box.delete(minus_box[1])
+
+var box add_box = na
+if not na(add_value) and long_short_switch
+    hl = str.contains(add_value, "ladd") ? low_value : high_value
+    col = str.contains(add_value, "ladd") ? color.lime : color.blue
+    style = str.contains(add_value, "ladd") ? label.style_label_upper_left : label.style_label_lower_left
+    txt = str.match(add_value, "[\\d]+")
+    tooltip_txt = str.contains(add_value, "ladd") ? "多加仓\n底右=抢购=涨\n顶左=抢购=回落" : "空加仓\n底左=见底=反转\n顶右=推动=跌"
+    label.new(bar_index, hl, text = str.tostring(txt), color = col, style = style, size = 14, tooltip = tooltip_txt,  text_font_family = font.family_default,  text_formatting = text.format_italic)
+    add_box := box.new(time, high_value, time + (192 * 15 * 60 * 1000), low_value, border_color = col, xloc=xloc.bar_time, border_style=line.style_dotted, bgcolor = color.new(col, 60))
+    box.delete(add_box[1])
+
+liquidation_switch = input.bool(true, "liquidation_switch")
+
+var box long_box = na
+if not na(long_liquidation) and liquidation_switch
+    txt = str.match(long_liquidation, "[\\d]+")
+    label.new(bar_index, low_value, text = str.tostring(txt), color = color.purple, style = label.style_label_up, size = 9, tooltip = "爆多")
+    long_box := box.new(time, high_value, time + (96 * 15 * 60 * 1000), low_value, border_color = color.new(color.purple, 70), xloc=xloc.bar_time, border_style=line.style_solid, bgcolor = color.new(color.purple, 70))
+    box.delete(long_box[1])
+
+var box short_box = na
+if not na(short_liquidation) and liquidation_switch
+    txt = str.match(short_liquidation, "[\\d]+")
+    label.new(bar_index, high_value, text = str.tostring(txt), color = color.orange, style = label.style_label_down, size = 9, tooltip = "爆空")
+    short_box := box.new(time, high_value, time + (96 * 15 * 60 * 1000), low_value, border_color = color.new(color.orange, 70), xloc=xloc.bar_time, border_style=line.style_solid, bgcolor = color.new(color.orange, 70))
+    box.delete(short_box[1])

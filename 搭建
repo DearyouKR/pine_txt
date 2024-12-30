@@ -1,0 +1,20 @@
+python3 -m venv liquidation
+mkdir -p  /root/liquidation/main
+source /root/liquidation/bin/activate && cd /root/liquidation/main
+
+chmod +x /root/liquidation/main/startup.sh
+
+python3 -m venv longshort
+mkdir -p  /root/longshort/main
+source /root/longshort/bin/activate && cd /root/longshort/main
+
+chmod +x /root/longshort/main/startup.sh
+
+
+python3 -m venv coinank
+mkdir -p  /root/coinank/main
+source /root/coinank/bin/activate && cd /root/coinank/main
+
+chmod +x /root/coinank/main/startup.sh
+
+crontab -e
